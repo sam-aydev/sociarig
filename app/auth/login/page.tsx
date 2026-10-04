@@ -98,9 +98,9 @@ export default function Page() {
                   <label className="text-[13px] lg:text-sm font-medium text-ink block">
                     Password
                   </label>
-                  <a href="#" className="text-[11px] lg:text-xs text-signal font-medium hover:underline">
+                  <Link href="/auth/forgot" className="text-[11px] lg:text-xs text-green-700 font-medium hover:underline">
                     Forgot password?
-                  </a>
+                  </Link>
                 </div>
                 <input
                   type="password"

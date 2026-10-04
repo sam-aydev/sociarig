@@ -14,6 +14,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "localhost:3000";
+
 export const metadata: Metadata = {
   title: {
     template: "%s | Sociarig - AI Content Repurposing",
@@ -31,18 +33,18 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Sociarig" }],
   creator: "Sociarig",
-  metadataBase: new URL("https://sociarig.com"),
+  metadataBase: new URL(baseUrl),
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://sociarig.com",
+    url: baseUrl,
     title: "Sociarig | AI Content Repurposing Engine",
     description:
       "Repurpose a single link into a month's worth of highly-aligned social content. Scale your brand voice without the manual effort.",
     siteName: "Sociarig",
     images: [
       {
-        url: "/og-image.jpg", // Create a 1200x630px image in your public folder
+        url: "/og-image.jpg", 
         width: 1200,
         height: 630,
         alt: "Sociarig Dashboard Preview",
@@ -51,11 +53,11 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Sociarig | AI Content Repurposing Engine",
+    title: "Sociarig - AI Content Repurposing Engine",
     description:
       "Turn one link into a month of content. The AI synthesis engine for founders and creators.",
     images: ["/og-image.jpg"],
-    creator: "@sociarig", // Replace with your actual Twitter handle
+    creator: "@sociarig", 
   },
   robots: {
     index: true,

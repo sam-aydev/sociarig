@@ -168,7 +168,7 @@ export default function AboutUs() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link 
-                href="/signup" 
+                href="/auth/signup" 
                 className="w-full sm:w-auto px-8 py-4 bg-black text-white rounded-xl font-bold hover:bg-black/20 transition-all flex items-center justify-center gap-2 shadow-xl shadow-signal/20 active:scale-95"
               >
                 Start Repurposing Free <ArrowRight size={18} />

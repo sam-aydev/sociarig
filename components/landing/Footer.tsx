@@ -125,7 +125,7 @@ export default function Footer() {
             © {new Date().getFullYear()} Sociarig Engine. All rights reserved.
           </p>
           <div className="flex items-center gap-2 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-signal animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-green-900 animate-pulse" />
             <span>Systems fully operational</span>
           </div>
         </div>

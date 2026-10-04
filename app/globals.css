@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Your other CSS below... */
 @theme {
   --color-paper: #edf0f1;
   --color-paper-dim: #e2e6e6;
@@ -59,7 +60,9 @@ body {
 }
 
 .font-feature-tight {
-  font-feature-settings: "ss01" 1, "liga" 1;
+  font-feature-settings:
+    "ss01" 1,
+    "liga" 1;
 }
 
 .text-balance {
@@ -69,7 +72,11 @@ body {
 /* Hairline used as a deliberate structural device, not decoration */
 .rule {
   height: 1px;
-  background: linear-gradient(to right, rgba(18, 21, 27, 0.14), rgba(18, 21, 27, 0));
+  background: linear-gradient(
+    to right,
+    rgba(18, 21, 27, 0.14),
+    rgba(18, 21, 27, 0)
+  );
 }
 
 .rule-full {

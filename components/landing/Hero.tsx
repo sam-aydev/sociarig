@@ -63,8 +63,8 @@ export default function Hero() {
         >
           <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-8 rounded-full border border-ink/10 bg-white shadow-sm text-xs font-semibold tracking-wide uppercase text-ink-soft">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-signal opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-signal"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-900 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-700"></span>
             </span>
             The Sociarig Engine
           </div>
@@ -76,9 +76,9 @@ export default function Hero() {
           </h1>
 
           <p className="text-lg md:text-xl text-ink-soft max-w-2xl text-balance mb-10">
-            Stop sounding like a robot. Paste a YouTube URL or Idea, and instantly
-            generate Twitter threads, LinkedIn carousels, and newsletters tuned
-            perfectly to your tone.
+            Stop sounding like a robot. Paste a YouTube URL or Idea, and
+            instantly generate Twitter threads, LinkedIn carousels, and
+            newsletters tuned perfectly to your tone.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
