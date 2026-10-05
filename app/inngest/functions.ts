@@ -65,7 +65,7 @@ export const generateContent = inngest.createFunction(
     id: "generate-dynamic-content",
     name: "Flexible Output Generator",
     retries: 2,
-    concurrency: { limit: 10 },
+    concurrency: { limit: 5 },
     triggers: [{ event: "app/generate.content" }],
   },
   async ({ event, step }) => {
