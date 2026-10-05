@@ -1,32 +1,43 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "./app/lib/util/supabase/server";
+import { createClient } from "@/app/lib/util/supabase/server";
 
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // 1. CRITICAL BYPASSES (Auth Callback, Inngest, Webhooks)
+  // These routes MUST execute without a valid user session cookie
+  if (
+    pathname.startsWith("/api/v1/inngest") ||
+    pathname.startsWith("/api/v1/webhooks") ||
+    pathname.startsWith("/auth/callback")
+  ) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
 
   const supabase = await createClient();
 
-  // 1. Fetch the user session
+  // 2. Fetch the user session
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
   const isAuthPage = pathname.startsWith("/auth");
   const unProtectedPage = pathname === "/" || pathname.startsWith("/blog");
   const isProtectedApp = pathname.startsWith("/app");
   const isOnboardingPage = pathname === "/app/onboarding";
 
-  // 2. Unauthenticated user trying to access the app
+  // 3. Unauthenticated user trying to access the app
   if (!user && isProtectedApp) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
   }
 
-  // 3. Authenticated user logic
+  // 4. Authenticated user logic
   if (user) {
     // If they are on the auth page, push them into the app
     if (isAuthPage || unProtectedPage) {
@@ -35,7 +46,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // THE ONBOARDING GATE: Check the boolean flag instead of document count
+    // THE ONBOARDING GATE: Check the boolean flag
     if (isProtectedApp) {
       // Look up their brand voice settings
       const { data: voice } = await supabase
@@ -46,7 +57,6 @@ export async function proxy(request: NextRequest) {
 
       // If they don't have a voice record yet, or it's false, they are not onboarded
       const hasFinishedOnboarding = voice?.is_onboarded === true;
-      console.log("Is Onboarded:", hasFinishedOnboarding);
 
       // Scenario A: They haven't finished, but are trying to access the main dashboard
       if (!hasFinishedOnboarding && !isOnboardingPage) {
@@ -69,6 +79,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Removed 'api|' so we can explicitly handle API routes in the middleware logic
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
