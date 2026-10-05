@@ -87,9 +87,10 @@ export function useProfile() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.clear(); // Wipe entire cache on logout
+      // queryClient.clear();
       toast.success("Logged out successfully");
-      router.replace("/auth");
+      // router.replace("/auth/login");
+      window.location.href = "/auth/login";
     },
   });
 

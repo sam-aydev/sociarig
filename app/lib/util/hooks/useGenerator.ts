@@ -55,6 +55,64 @@ export function useGenerator() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Unauthorized");
 
+      // 1. Calculate EXACT requested volume from the UI sliders
+      let requestedCount = 0;
+      const selectedPlatformsArray = Object.entries(platforms)
+        .filter(([_, isSelected]) => isSelected)
+        .map(([key]) => key);
+
+      const activeCounts: Record<string, number> = {};
+      selectedPlatformsArray.forEach((p) => {
+        const count = platformCounts[p as keyof typeof platformCounts] || 1;
+        activeCounts[p] = count;
+        requestedCount += count;
+      });
+
+      // 2. STRICT PLAN VALIDATION
+      const { data: sub, error: subError } = await supabase
+        .from("subscriptions")
+        .select("generations_used, max_generations")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (subError) {
+        throw new Error("Could not verify your subscription plan.");
+      }
+
+      const currentUsed = sub?.generations_used || 0;
+      const currentMax = sub?.max_generations || 5;
+
+      // Check if they have enough credits for this specific request
+      if (currentUsed + requestedCount > currentMax) {
+        const remaining = Math.max(0, currentMax - currentUsed);
+        throw new Error(
+          `Plan exhausted. You requested ${requestedCount} items, but only have ${remaining} left. Please upgrade.`,
+        );
+      }
+
+      // 3. SETUP FREE PLAN (DO NOT DEDUCT)
+      if (!sub) {
+        const { error: insertError } = await supabase
+          .from("subscriptions")
+          .insert({
+            user_id: user.id,
+            status: "free",
+            name: "Free Plan",
+            generations_used: 0, // Starts at 0. API route will handle the deduction.
+            max_generations: 5,
+            lemon_squeezy_id: `free_${user.id}`,
+            order_id: 0,
+            email: user.email || "",
+            price_id: "0",
+          });
+
+        if (insertError) {
+          throw new Error(
+            `Failed to create free tier record: ${insertError.message}`,
+          );
+        }
+      }
+
       const { data: voice, error: voiceError } = await supabase
         .from("brand_voices")
         .select("id")
@@ -64,16 +122,7 @@ export function useGenerator() {
       if (voiceError || !voice)
         throw new Error("Please complete voice training first.");
 
-      const selectedPlatformsArray = Object.entries(platforms)
-        .filter(([_, isSelected]) => isSelected)
-        .map(([key]) => key);
-
-      // Build activeCounts to pass explicitly to the API
-      const activeCounts: Record<string, number> = {};
-      selectedPlatformsArray.forEach((p) => {
-        activeCounts[p] = platformCounts[p as keyof typeof platformCounts] || 1;
-      });
-
+      // 4. CREATE PENDING RECORD
       const { data: record, error: insertError } = await supabase
         .from("content_generations")
         .insert({
@@ -85,20 +134,17 @@ export function useGenerator() {
             input_mode: inputMode,
             topic: inputMode === "idea" ? inputValue : "",
             platforms: selectedPlatformsArray,
-            platform_counts: activeCounts, // Saved in DB for history reference
+            platform_counts: activeCounts,
           },
         })
         .select("id")
         .single();
 
       if (insertError) {
-        console.error(
-          "Detailed Supabase Insert Error:",
-          JSON.stringify(insertError, null, 2),
-        );
         throw new Error(`Database Error: ${insertError.message}`);
       }
 
+      // 5. CALL SECURE API ROUTE
       const res = await fetch("/api/v1/generations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -108,11 +154,17 @@ export function useGenerator() {
           inputValue,
           voiceId: voice.id,
           platforms: selectedPlatformsArray,
-          platformCounts: activeCounts, // Send precise counts to the API
+          platformCounts: activeCounts,
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to start processing engine.");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(
+          errData.error ||
+            `API rejected request. Check middleware or Inngest keys.`,
+        );
+      }
 
       return record.id;
     },

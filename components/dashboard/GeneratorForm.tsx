@@ -1,8 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link2, Lightbulb, Sparkles, CheckCircle2, Mail } from "lucide-react";
+import {
+  Link2,
+  Lightbulb,
+  Sparkles,
+  CheckCircle2,
+  Mail,
+  Plus,
+} from "lucide-react";
 import { FaInstagram, FaLinkedin, FaTwitter, FaThreads } from "react-icons/fa6";
 import { toast } from "sonner";
 import type { InputMode, EngineState } from "@/app/lib/util/hooks/useGenerator";
@@ -31,6 +38,7 @@ interface GeneratorFormProps {
 
   selectedCount: number;
   handleGenerate: (e: React.FormEvent) => void;
+  handleReset: () => void; // Added for the reset overlay
 }
 
 const PLATFORM_CONFIG = [
@@ -41,18 +49,9 @@ const PLATFORM_CONFIG = [
   { id: "newsletter", label: "Newsletter", icon: Mail },
 ] as const;
 
-// Helper to check if a string looks like a URL
 const isUrl = (str: string) => {
-  try {
-    new URL(str);
-    return true;
-  } catch {
-    return (
-      str.startsWith("http://") ||
-      str.startsWith("https://") ||
-      str.startsWith("www.")
-    );
-  }
+  const urlPattern = /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/;
+  return urlPattern.test(str.trim());
 };
 
 export default function GeneratorForm(props: GeneratorFormProps) {
@@ -68,21 +67,25 @@ export default function GeneratorForm(props: GeneratorFormProps) {
     setPlatformCount,
     selectedCount,
     handleGenerate,
+    handleReset,
   } = props;
 
-  // useTransition provides an immediate boolean (isPending) while React processes the state update
-  const [isPending, startTransition] = useTransition();
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  // Local lock to cover the microsecond gap before React Query switches engineState to 'processing'
+  const [isSubmittingLocal, setIsSubmittingLocal] = useState(false);
 
-  // Combine engine state, transition state, and local submission flag to completely lock the button
+  // Auto-unlock if the engine resets or errors out
+  useEffect(() => {
+    if (engineState === "idle" || engineState === "error") {
+      setIsSubmittingLocal(false);
+    }
+  }, [engineState]);
+
   const isBusy =
     engineState === "processing" ||
     engineState === "completed" ||
-    isPending ||
-    isSubmitted;
+    isSubmittingLocal;
 
   const handleModeSwitch = (mode: InputMode) => {
-    // If switching modes, clear the input to prevent accidental URL submission as an idea
     if (mode !== inputMode) {
       setInputValue("");
     }
@@ -92,11 +95,9 @@ export default function GeneratorForm(props: GeneratorFormProps) {
   const safeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Prevent double execution
     if (isBusy) return;
 
-    // Validate Idea mode doesn't contain a URL
-    if (inputMode === "idea" && isUrl(inputValue.trim().split(" ")[0])) {
+    if (inputMode === "idea" && isUrl(inputValue)) {
       toast.error("Invalid Input", {
         description:
           "It looks like you pasted a link. Please switch to 'Repurpose a Link' mode.",
@@ -104,17 +105,9 @@ export default function GeneratorForm(props: GeneratorFormProps) {
       return;
     }
 
-    setIsSubmitted(true);
-
-    // Wrap the parent's generation handler in a transition to lock the UI instantly
-    startTransition(() => {
-      try {
-        handleGenerate(e);
-      } finally {
-        // Reset local submission flag (engineState will take over if it succeeded)
-        setIsSubmitted(false);
-      }
-    });
+    // Immediately lock the UI
+    setIsSubmittingLocal(true);
+    handleGenerate(e);
   };
 
   return (
@@ -122,7 +115,35 @@ export default function GeneratorForm(props: GeneratorFormProps) {
       layout
       className="bg-white/80 backdrop-blur-xl border border-white/40 rounded-3xl sm:rounded-[2rem] p-2 sm:p-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-8 sm:mb-10 relative overflow-hidden ring-1 ring-ink/5"
     >
-      {/* Animated Segmented Tabs */}
+      {/* SUCCESS OVERLAY: Covers the form beautifully when completed */}
+      <AnimatePresence>
+        {engineState === "completed" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/90 backdrop-blur-md rounded-3xl sm:rounded-[2rem]"
+          >
+            <div className="w-16 h-16 bg-signal/10 rounded-full flex items-center justify-center mb-4 text-signal">
+              <CheckCircle2 size={32} />
+            </div>
+            <h3 className="font-display text-2xl font-bold text-ink mb-2">
+              Generation Complete
+            </h3>
+            <p className="text-ink-soft text-sm mb-6 text-center max-w-xs">
+              Your assets have been synthesized successfully. Scroll down to
+              view them.
+            </p>
+            <button
+              onClick={handleReset}
+              className="flex items-center gap-2 px-6 py-3 bg-ink text-white rounded-xl font-bold text-sm hover:bg-ink-soft transition-colors shadow-lg active:scale-95"
+            >
+              <Plus size={16} /> Create Another
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex p-1 sm:p-1.5 bg-ink/5 rounded-[1rem] sm:rounded-2xl relative z-10 mb-4 sm:mb-4 mx-1">
         {(["url", "idea"] as const).map((mode) => (
           <button
@@ -157,7 +178,6 @@ export default function GeneratorForm(props: GeneratorFormProps) {
         onSubmit={safeSubmit}
         className="relative z-10 bg-paper/40 rounded-2xl sm:rounded-[1.5rem] border border-white p-4 sm:p-6 md:p-8 shadow-inner"
       >
-        {/* Input Section */}
         <div className="mb-8 sm:mb-10">
           {inputMode === "url" ? (
             <div className="relative group">
@@ -177,7 +197,10 @@ export default function GeneratorForm(props: GeneratorFormProps) {
           ) : (
             <div className="relative group">
               <div className="absolute top-4 sm:top-5 left-4 sm:left-5 pointer-events-none text-ink-faint transition-colors group-focus-within:text-signal">
-                <Lightbulb className="w-5 h-5 sm:w-5 sm:h-5" strokeWidth={2.5} />
+                <Lightbulb
+                  className="w-5 h-5 sm:w-5 sm:h-5"
+                  strokeWidth={2.5}
+                />
               </div>
               <textarea
                 value={inputValue}
@@ -192,7 +215,6 @@ export default function GeneratorForm(props: GeneratorFormProps) {
           )}
         </div>
 
-        {/* Deliverables & Volume Grid */}
         <div className="mb-8 sm:mb-10">
           <div className="flex items-center justify-between mb-4 sm:mb-5">
             <label className="block text-[10px] sm:text-xs font-extrabold text-ink-soft uppercase tracking-widest">
@@ -222,14 +244,13 @@ export default function GeneratorForm(props: GeneratorFormProps) {
                       : "bg-white border-ink/10 hover:border-ink/20 shadow-sm"
                   }`}
                 >
-                  {/* Card Header (Toggle) */}
                   <button
                     type="button"
                     disabled={isBusy}
                     onClick={() =>
                       togglePlatform(platform.id as keyof typeof platforms)
                     }
-                    className="w-full flex items-center justify-between p-3 sm:p-4 cursor-pointer outline-none"
+                    className="w-full flex items-center justify-between p-3 sm:p-4 cursor-pointer outline-none disabled:cursor-not-allowed"
                   >
                     <div className="flex items-center gap-3">
                       <div
@@ -244,7 +265,6 @@ export default function GeneratorForm(props: GeneratorFormProps) {
                       </span>
                     </div>
 
-                    {/* Minimalist Checkbox */}
                     <div
                       className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? "border-signal bg-signal text-white" : "border-ink/20 bg-transparent text-transparent"}`}
                     >
@@ -255,7 +275,6 @@ export default function GeneratorForm(props: GeneratorFormProps) {
                     </div>
                   </button>
 
-                  {/* Card Body: Per-Platform Animated Slider */}
                   <AnimatePresence>
                     {isSelected && (
                       <motion.div
@@ -268,7 +287,6 @@ export default function GeneratorForm(props: GeneratorFormProps) {
                           <p className="text-[9px] sm:text-[10px] font-bold text-signal/70 uppercase tracking-widest mb-2.5">
                             Variations to Generate
                           </p>
-
                           <div className="flex relative bg-black/5 rounded-[0.6rem] sm:rounded-xl p-1 shadow-inner">
                             {[1, 2, 3].map((num) => (
                               <button
@@ -282,7 +300,7 @@ export default function GeneratorForm(props: GeneratorFormProps) {
                                     num,
                                   );
                                 }}
-                                className="flex-1 relative z-10 py-1 sm:py-1.5 text-xs sm:text-sm font-bold text-center outline-none"
+                                className="flex-1 relative z-10 py-1 sm:py-1.5 text-xs sm:text-sm font-bold text-center outline-none disabled:cursor-not-allowed"
                               >
                                 {currentCount === num && (
                                   <motion.div
@@ -313,19 +331,18 @@ export default function GeneratorForm(props: GeneratorFormProps) {
           </div>
         </div>
 
-        {/* Generate Button */}
         <div className="pt-2">
           <motion.button
             whileHover={{ scale: selectedCount > 0 && !isBusy ? 1.01 : 1 }}
             whileTap={{ scale: selectedCount > 0 && !isBusy ? 0.98 : 1 }}
             type="submit"
             disabled={isBusy || selectedCount === 0}
-            className="w-full py-2 bg-ink text-paper rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all shadow-xl shadow-ink/20 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 sm:gap-3 cursor-pointer group"
+            className="w-full py-3 sm:py-4 bg-ink text-paper rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all shadow-xl shadow-ink/20 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 sm:gap-3 cursor-pointer group"
           >
             <Sparkles
               className={`w-4 h-4 sm:w-5 sm:h-5 text-signal ${isBusy ? "animate-pulse" : "group-hover:rotate-12 transition-transform"}`}
             />
-            {isBusy ? "Processing..." : "Produce Content"}
+            {isBusy ? "Processing Engine..." : "Produce Content"}
           </motion.button>
         </div>
       </form>

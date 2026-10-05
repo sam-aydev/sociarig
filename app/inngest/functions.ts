@@ -8,18 +8,19 @@ import { z } from "zod";
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "missing-key-fallback",
 });
+
 const xai = new OpenAI({
   apiKey: process.env.XAI_API_KEY || "missing-key-fallback",
   baseURL: "https://api.x.ai/v1",
 });
 
+// Always use the Service Role Key for backend tasks to bypass RLS
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SECRET_KEY!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY! || process.env.SUPABASE_SECRET_KEY!,
 );
 
 // --- SIMPLIFIED JSON SCHEMA MAPPINGS ---
-// We map possible platform keys to their JSON schema definitions for the LLM
 const JSON_SCHEMA_MAPPING: Record<string, any> = {
   twitter: {
     type: "array",
@@ -68,7 +69,6 @@ export const generateContent = inngest.createFunction(
     triggers: [{ event: "app/generate.content" }],
   },
   async ({ event, step }) => {
-    // Extract platformCounts instead of postLength
     const {
       generationId,
       inputMode,
@@ -203,7 +203,6 @@ export const generateContent = inngest.createFunction(
               )
               .length(count, `Expected exactly ${count} newsletter(s)`);
           } else {
-            // ALL Social Platforms (Twitter, Threads, LinkedIn, Insta) are now just flat arrays of strings
             jsonProperties[platform] = {
               type: "array",
               minItems: count,
@@ -284,21 +283,63 @@ export const generateContent = inngest.createFunction(
 
       return { success: true, generationId };
     } catch (error) {
-      await step.run("save-error", async () => {
+      // CRITICAL FIX: Refund Logic
+      await step.run("save-error-and-refund", async () => {
         const errorMessage =
           error instanceof Error
             ? error.message
             : "Unknown critical error occurred";
+
         console.error(`[Inngest Error - ${generationId}]:`, errorMessage);
-        await supabase
+
+        // 1. Mark generation as failed and retrieve user_id
+        const { data: genData } = await supabase
           .from("content_generations")
           .update({
             status: "failed",
             error_message: errorMessage,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", generationId);
+          .eq("id", generationId)
+          .select("user_id")
+          .maybeSingle();
+
+        // 2. Automatically Refund the Credits!
+        if (genData?.user_id) {
+          // Calculate how many credits we originally charged for this run
+          let requestedCount = 0;
+          if (platforms && platformCounts) {
+            platforms.forEach((p: string) => {
+              requestedCount += Number(platformCounts[p]) || 1;
+            });
+          }
+
+          if (requestedCount > 0) {
+            // Fetch current usage
+            const { data: sub } = await supabase
+              .from("subscriptions")
+              .select("generations_used")
+              .eq("user_id", genData.user_id)
+              .single();
+
+            if (sub) {
+              // Subtract the failed amount, ensuring we don't go below 0
+              const newUsage = Math.max(
+                0,
+                (sub.generations_used || 0) - requestedCount,
+              );
+
+              // Update the subscription back to the refunded amount
+              await supabase
+                .from("subscriptions")
+                .update({ generations_used: newUsage })
+                .eq("user_id", genData.user_id);
+            }
+          }
+        }
       });
+
+      // Rethrow so Inngest registers the failure in the dashboard
       throw error;
     }
   },

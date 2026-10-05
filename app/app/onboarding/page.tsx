@@ -21,7 +21,7 @@ export default function OnboardingPage() {
     isComplete,
     validFileCount,
     handleFileUpload,
-    isError, 
+    isError,
     queryErrorMsg,
     completeOnboarding,
     isFinishing,
@@ -63,7 +63,6 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-paper flex flex-col items-center justify-center p-6 relative overflow-hidden z-50">
-      {/* Background decoration */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-signal/5 rounded-full blur-[100px] pointer-events-none" />
 
       <motion.div
@@ -80,20 +79,24 @@ export default function OnboardingPage() {
         </h1>
         <p className="text-ink-soft text-base mb-8 leading-relaxed">
           To generate content that actually sounds like you, Fractal needs
-          reference material. Upload 3 to 10 of your best past newsletters, blog
-          posts, or LinkedIn threads.
+          reference material. Upload strictly 3 of your best past newsletters,
+          blog posts, or LinkedIn threads.
         </p>
 
         {/* Upload Dropzone */}
         <div
-          onClick={() => !isProcessing && fileInputRef.current?.click()}
-          className={`bg-paper-dim/30 border-2 border-dashed border-ink/15 rounded-2xl p-8 flex flex-col items-center justify-center text-center transition-colors mb-8 ${isProcessing ? "opacity-70 cursor-not-allowed" : "cursor-pointer hover:bg-paper-dim/50 hover:border-signal/50 group"}`}
+          onClick={() =>
+            !isProcessing && validFileCount < 3 && fileInputRef.current?.click()
+          }
+          className={`bg-paper-dim/30 border-2 border-dashed border-ink/15 rounded-2xl p-8 flex flex-col items-center justify-center text-center transition-colors mb-8 ${isProcessing || validFileCount >= 3 ? "opacity-70 cursor-not-allowed" : "cursor-pointer hover:bg-paper-dim/50 hover:border-signal/50 group"}`}
         >
           <div className="w-14 h-14 rounded-full bg-white shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
             <UploadCloud size={24} className="text-signal" />
           </div>
           <h3 className="text-base font-semibold text-ink mb-1">
-            Select files to upload
+            {validFileCount >= 3
+              ? "Training Data Complete"
+              : "Select files to upload"}
           </h3>
           <p className="text-sm text-ink-faint">
             PDF, DOCX, or TXT (Max 10MB each)
@@ -101,18 +104,15 @@ export default function OnboardingPage() {
           <input
             type="file"
             ref={fileInputRef}
-            // 1. Stop bubbling AND clear the previous value BEFORE the dialog opens
             onClick={(e) => {
               e.stopPropagation();
               e.currentTarget.value = "";
             }}
-            // 2. Safely capture the files without destroying the reference
             onChange={(e) => {
               if (e.target.files && e.target.files.length > 0) {
                 handleFileUpload(e.target.files);
               }
             }}
-            // 3. Bulletproof accept string (Combines extensions + official MIME types)
             accept=".txt, .pdf, .docx, text/plain, application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             multiple
             className="hidden"
@@ -169,7 +169,7 @@ export default function OnboardingPage() {
           ) : isComplete ? (
             "Enter Workspace"
           ) : (
-            `Upload at least ${Math.max(0, 3 - validFileCount)} more files`
+            `Upload ${Math.max(0, 3 - validFileCount)} more file${3 - validFileCount === 1 ? "" : "s"}`
           )}
 
           {isComplete && !isFinishing && (

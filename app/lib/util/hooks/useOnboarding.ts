@@ -12,6 +12,7 @@ export type UploadedFile = {
 
 const MAX_FILE_SIZE_MB = 10;
 const ALLOWED_EXTENSIONS = ["txt", "pdf", "docx"];
+const MAX_FILES = 3; // Enforce strict 3 file limit
 
 export function useOnboarding() {
   const router = useRouter();
@@ -105,12 +106,10 @@ export function useOnboarding() {
             });
           }
 
-          // Invalidate server queries
           queryClient.invalidateQueries({
             queryKey: ["onboarding", "voice-docs"],
           });
-          
-          // FIX: Aggressively remove the item from local queue immediately when the server updates it
+
           setLocalUploadQueue((prev) =>
             prev.filter((f) => f.name !== file_name),
           );
@@ -171,7 +170,7 @@ export function useOnboarding() {
     },
   });
 
-  // 4. File Handler with Client Validation
+  // 4. File Handler with Client Validation & Strict Limit
   const handleFileUpload = (files: FileList | null) => {
     if (!serverData?.voiceId) {
       toast.error("Workspace is still initializing. Please wait a second.");
@@ -179,28 +178,41 @@ export function useOnboarding() {
     }
     if (!files || files.length === 0) return;
 
-    const fileArray = Array.from(files);
-    const existingNames = new Set([
-      ...(serverData?.docs || []).map((d) => d.name),
-      ...localUploadQueue.map((f) => f.name),
-    ]);
+    // Calculate available slots based on currently valid files (ignoring errors)
+    const serverDocs = serverData?.docs || [];
+    const pendingLocal = localUploadQueue.filter(
+      (local) =>
+        !serverDocs.some((d) => d.name === local.name) ||
+        local.status === "error",
+    );
+    const combinedFiles = [...serverDocs, ...pendingLocal];
+    const currentValidCount = combinedFiles.filter(
+      (f) => f.status !== "error",
+    ).length;
 
+    const availableSlots = MAX_FILES - currentValidCount;
+
+    if (availableSlots <= 0) {
+      toast.error("Upload limit reached", {
+        description: `You can only upload a maximum of ${MAX_FILES} files.`,
+      });
+      return;
+    }
+
+    const fileArray = Array.from(files);
+    const existingNames = new Set(combinedFiles.map((f) => f.name));
     const validNewFiles: File[] = [];
 
     for (const file of fileArray) {
       const ext = file.name.split(".").pop()?.toLowerCase();
 
       if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
-        toast.error(`Invalid format: ${file.name}`, {
-          description: "Only TXT, PDF, or DOCX files are allowed.",
-        });
+        toast.error(`Invalid format: ${file.name}`);
         continue;
       }
 
       if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-        toast.error(`File too large: ${file.name}`, {
-          description: `Maximum file size is ${MAX_FILE_SIZE_MB}MB.`,
-        });
+        toast.error(`File too large: ${file.name}`);
         continue;
       }
 
@@ -214,14 +226,22 @@ export function useOnboarding() {
 
     if (validNewFiles.length === 0) return;
 
-    const newQueueEntries: UploadedFile[] = validNewFiles.map((f) => ({
+    // Truncate to available slots
+    const filesToUpload = validNewFiles.slice(0, availableSlots);
+    if (filesToUpload.length < validNewFiles.length) {
+      toast.info(
+        `Only ${availableSlots} file(s) were added to strictly maintain the limit of ${MAX_FILES}.`,
+      );
+    }
+
+    const newQueueEntries: UploadedFile[] = filesToUpload.map((f) => ({
       name: f.name,
-      status: "processing",
+      status: "processing", // Setting this triggers the loader
     }));
 
     setLocalUploadQueue((prev) => [...prev, ...newQueueEntries]);
 
-    validNewFiles.forEach((file) => {
+    filesToUpload.forEach((file) => {
       uploadMutation.mutate({ file, voiceId: serverData.voiceId });
     });
   };
@@ -231,8 +251,6 @@ export function useOnboarding() {
     const serverDocs = serverData?.docs || [];
     const serverDocNames = new Set(serverDocs.map((d) => d.name));
 
-    // FIX: Only keep local items if they are completely absent from the server.
-    // If the server knows about the file (even if it's processing), trust the server state.
     const pendingLocal = localUploadQueue.filter(
       (local) => !serverDocNames.has(local.name) || local.status === "error",
     );
@@ -243,13 +261,14 @@ export function useOnboarding() {
   const validFileCount = uploadedFiles.filter(
     (f) => f.status !== "error",
   ).length;
-  
-  // Wait to allow proceeding until all uploads are out of the processing state
+
+  // Loader logic automatically drops to `false` if an upload errors out.
   const isProcessing =
     uploadMutation.isPending ||
     uploadedFiles.some((f) => f.status === "processing");
-    
-  const isComplete = validFileCount >= 3 && !isProcessing;
+
+  // Must be EXACTLY 3 files to complete
+  const isComplete = validFileCount === MAX_FILES && !isProcessing;
 
   // 6. Complete Onboarding Mutation
   const completeOnboardingMutation = useMutation({

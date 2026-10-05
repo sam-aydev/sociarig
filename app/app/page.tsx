@@ -1,12 +1,12 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { RefreshCcw, AudioLines, Sparkles } from "lucide-react";
+import { RefreshCcw, AudioLines, Sparkles, CheckCircle } from "lucide-react";
 import ExportWorkflows from "@/components/dashboard/ExportWorkflows";
 import { useGenerator } from "@/app/lib/util/hooks/useGenerator";
 import GeneratorForm from "@/components/dashboard/GeneratorForm";
 
-// Custom highly-tuned spring and cubic-bezier easings for premium feel
 const EASE = [0.22, 1, 0.36, 1] as const;
 const SPRING: object = {
   type: "spring",
@@ -19,15 +19,24 @@ export default function GeneratorPage() {
   const generatorProps = useGenerator();
   const { engineState, inputMode, generatedData, handleReset } = generatorProps;
   const reduceMotion = useReducedMotion();
+  const outputRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll down to the generated results beautifully
+  useEffect(() => {
+    if (engineState === "completed" && outputRef.current) {
+      setTimeout(() => {
+        outputRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 150);
+    }
+  }, [engineState]);
 
   return (
     <div className="relative w-full max-w-5xl mx-auto pb-24 min-h-[80vh]">
-      {/* Ambient AI Background (Dot grid + Multi-layered glow) */}
       <div className="absolute inset-0 -z-20 pointer-events-none overflow-hidden [mask-image:linear-gradient(to_bottom,white_20%,transparent_80%)]">
-        {/* Architectural Dot Grid */}
         <div className="absolute inset-0 bg-[radial-gradient(var(--color-ink)_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.03]" />
-
-        {/* Animated Primary Signal Glow */}
         <motion.div
           animate={
             reduceMotion
@@ -46,14 +55,12 @@ export default function GeneratorPage() {
         />
       </div>
 
-      {/* Premium Page Header */}
       <motion.header
         initial={reduceMotion ? false : "hidden"}
         animate="show"
         variants={{ show: { transition: { staggerChildren: 0.1 } } }}
         className="mb-14 max-w-2xl relative z-10"
       >
-        {/* Status Badge */}
         <motion.div
           variants={{
             hidden: { opacity: 0, y: 10 },
@@ -68,6 +75,8 @@ export default function GeneratorPage() {
           <div className="relative flex h-5 w-5 items-center justify-center rounded-full bg-signal/15">
             {engineState === "processing" ? (
               <div className="absolute inset-0 rounded-full border border-signal border-t-transparent animate-spin" />
+            ) : engineState === "completed" ? (
+              <CheckCircle size={12} className="text-signal relative z-10" />
             ) : (
               <motion.div
                 animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
@@ -75,12 +84,13 @@ export default function GeneratorPage() {
                 className="absolute inset-0 rounded-full bg-signal/30 blur-sm"
               />
             )}
-            <AudioLines size={12} className="text-signal relative z-10" />
+            {engineState !== "completed" && (
+              <AudioLines size={12} className="text-signal relative z-10" />
+            )}
           </div>
           Sociarig Synthesis Engine
         </motion.div>
 
-        {/* Gradient Headline */}
         <motion.h1
           variants={{
             hidden: { opacity: 0, y: 14 },
@@ -100,7 +110,6 @@ export default function GeneratorPage() {
           />
         </motion.h1>
 
-        {/* Subheadline */}
         <motion.p
           variants={{
             hidden: { opacity: 0, y: 14 },
@@ -117,7 +126,6 @@ export default function GeneratorPage() {
         </motion.p>
       </motion.header>
 
-      {/* 3. The Decoupled Input Engine & Overlay */}
       <div className="relative">
         <motion.div
           animate={{
@@ -134,7 +142,7 @@ export default function GeneratorPage() {
           <GeneratorForm {...generatorProps} />
         </motion.div>
 
-        {/* Cinematic Processing State Overlay */}
+        {/* Processing State Overlay */}
         <AnimatePresence>
           {engineState === "processing" && (
             <motion.div
@@ -155,7 +163,6 @@ export default function GeneratorPage() {
                 transition={SPRING}
                 className="relative w-[min(90%,24rem)] overflow-hidden rounded-2xl border border-ink/10 bg-white/90 backdrop-blur-xl shadow-2xl shadow-ink/10"
               >
-                {/* Shimmer sweeping effect */}
                 <motion.div
                   className="absolute inset-0 z-0 bg-gradient-to-r from-transparent via-white/60 to-transparent -skew-x-12"
                   animate={{ x: ["-200%", "200%"] }}
@@ -166,15 +173,12 @@ export default function GeneratorPage() {
                     repeatDelay: 1,
                   }}
                 />
-
                 <div className="relative z-10 flex items-center gap-5 px-6 py-5">
-                  {/* Advanced Spinner */}
                   <div className="relative flex h-10 w-10 shrink-0 items-center justify-center">
                     <div className="absolute inset-0 rounded-full border-[3px] border-ink/5" />
                     <div className="absolute inset-0 animate-spin rounded-full border-[3px] border-transparent border-t-signal border-r-signal/30" />
                     <div className="h-2.5 w-2.5 rounded-full bg-signal shadow-[0_0_10px_var(--color-signal)] animate-pulse" />
                   </div>
-
                   <div className="flex min-w-0 flex-col">
                     <span className="text-sm font-bold text-ink tracking-wide">
                       Engine is working...
@@ -186,8 +190,6 @@ export default function GeneratorPage() {
                     </span>
                   </div>
                 </div>
-
-                {/* Glowing indeterminate progress rail */}
                 <div className="relative h-1 w-full bg-ink/5 overflow-hidden">
                   <motion.div
                     className="absolute inset-y-0 w-1/2 bg-signal shadow-[0_0_8px_var(--color-signal)] rounded-full"
@@ -211,13 +213,13 @@ export default function GeneratorPage() {
       <AnimatePresence>
         {engineState === "completed" && generatedData && (
           <motion.section
+            ref={outputRef} // Used for auto-scrolling
             initial={{ opacity: 0, y: 30, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.98 }}
             transition={SPRING}
-            className="mt-16 space-y-8 relative z-10"
+            className="mt-6 sm:mt-16 space-y-8 relative z-10 scroll-mt-24" // scroll-mt offsets the header height when scrolling
           >
-            {/* Output Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-t border-ink/10 pt-10">
               <div>
                 <motion.div
@@ -233,19 +235,22 @@ export default function GeneratorPage() {
                 </p>
               </div>
 
+              {/* Enhanced Reset Button at the bottom as a secondary option */}
               <button
-                onClick={handleReset}
+                onClick={() => {
+                  handleReset();
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
                 className="group cursor-pointer inline-flex items-center justify-center gap-2 rounded-xl border border-ink/10 bg-white px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all hover:border-ink/20 hover:bg-paper hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/40 focus-visible:ring-offset-2 active:scale-95"
               >
                 <RefreshCcw
                   size={16}
                   className="transition-transform duration-500 group-hover:-rotate-180 text-ink-soft group-hover:text-signal"
                 />
-                Start Over
+                Start New Generation
               </button>
             </div>
 
-            {/* The Workflows Component */}
             <div className="bg-white rounded-[2rem] border border-ink/10 shadow-sm p-1">
               <ExportWorkflows content={generatedData} />
             </div>

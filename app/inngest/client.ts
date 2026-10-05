@@ -18,7 +18,7 @@ type VoiceProcessEvent = {
 };
 
 export const inngest = new Inngest({
-  id: "lexisync",
+  id: "sociarig",
   schemas: {
     events: {
       "app/generate.content": {} as ContentGenerationEvent,
