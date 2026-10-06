@@ -1,51 +1,58 @@
+````markdown
 # Sociarig 🚀
 
-**The AI Content Synthesis Engine for Founders and Creators.**
+**One link. Endless content. In your exact voice.**
 
-Turn a single URL, document, or raw idea into a month's worth of highly-aligned social media content across Twitter, LinkedIn, Instagram, Threads, and email newsletters.
+Turn a single URL, raw idea, or long-form document into a month's worth of highly aligned social media assets across X (Twitter), LinkedIn, Instagram, Threads, and email newsletters.
 
 ---
 
 ## 🌟 Features
 
-- **Omnichannel Formatting**: Generate platform-specific content for Twitter (threads), LinkedIn (narratives), and Newsletters simultaneously.
-- **Brand Voice Cloning**: Upload past writing (TXT, PDF, DOCX) to train the engine on your exact tone, vocabulary, and formatting vectors.
-- **Asynchronous Processing**: Reliable, long-running AI generation pipelines powered by Inngest.
-- **Real-Time Dashboard**: Instantly see activity feeds, generation statuses, and credit usage via Supabase Realtime subscriptions.
-- **"Double Lock" Security**: Strict usage limits enforced on both the client UI (Framer Motion visual locks) and the backend API (Supabase Service Role verification).
-- **Automated Billing**: Fully integrated with Lemon Squeezy for seamless upgrades, prorations, webhooks, and usage resets.
+- **Omnichannel Synthesis**: Generate format-optimized content for X threads, LinkedIn posts/carousels, Threads, Instagram captions, and newsletters simultaneously with granular variation sliders.
+- **Brand Voice Cloning**: Upload past writing samples (TXT, PDF, DOCX) to extract, chunk, and embed tone vectors via background embeddings before access is unlocked.
+- **Mandatory Onboarding Gate**: New users are routed into an onboarding workflow enforcing a 3-document calibration limit before dashboard access.
+- **Secure SSR Auth with PKCE**: Full Supabase authentication leveraging PKCE exchange via `/auth/callback`, custom Resend SMTP delivery, and temporary disposable email protection.
+- **Automated Rollback Engine**: Implements a "Reserve Upfront, Refund on Failure" pattern—if background worker handoffs fail, reserved credits are immediately refunded.
+- **Idempotent Webhook Processing**: Lemon Squeezy integration backed by dedicated webhook audit tables (`webhook_events`) to prevent duplicate credit replenishment.
+- **Real-Time Workspace Sync**: Realtime `postgres_changes` subscriptions update generation status, document embeddings, and credit balances instantly.
+- **Adaptive Responsive UI**: Polished generation history, debounced search filters, responsive modal dialogues, and mobile-optimized action controls.
+
+---
 
 ## 🛠️ Tech Stack
 
-### Core
+### Core Framework & UI
 
-- **Framework:** [Next.js 14+](https://nextjs.org/) (App Router, Server Actions)
+- **Framework:** [Next.js 14+](https://nextjs.org/) (App Router, Server Actions, Route Handlers)
 - **Language:** [TypeScript](https://www.typescriptlang.org/)
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/)
 - **Animations:** [Framer Motion](https://www.framer.com/motion/)
+- **Icons & Notifications:** [Lucide React](https://lucide.dev/), [React Icons](https://react-icons.github.io/react-icons/), [Sonner](https://sonner.emilkowal.ski/)
 
-### Data & Backend
+### Data, Auth & Messaging
 
-- **Database & Auth:** [Supabase](https://supabase.com/) (PostgreSQL, Auth, Realtime `postgres_changes`, RLS)
-- **State Management:** [TanStack Query](https://tanstack.com/query) (React Query)
-- **Background Jobs:** [Inngest](https://www.inngest.com/) (Serverless queues, idempotency, retries)
-- **Payments:** [Lemon Squeezy](https://www.lemonsqueezy.com/) (Checkout URLs, HMAC Webhooks)
+- **Database & Auth:** [Supabase](https://supabase.com/) (PostgreSQL, Auth with PKCE, Row-Level Security, Realtime engine)
+- **State & Cache:** [TanStack Query v5](https://tanstack.com/query) (Optimistic updates, cache invalidation)
+- **Email Delivery:** [Resend](https://resend.com/) (Custom SMTP provider for auth and transactional communications)
+- **Bot/Disposable Protection:** `disposable-email-domains`
 
-### AI & Data Parsing
+### Pipeline & Payments
 
-- **LLM Engine:** Grok / OpenAI
-- **File Parsing:** `mammoth` (DOCX), `pdf2json` (PDF)
+- **Background Orchestration:** [Inngest](https://www.inngest.com/) (Step-based serverless execution, auto-retries, atomic event keys)
+- **Billing & Subscriptions:** [Lemon Squeezy](https://www.lemonsqueezy.com/) (HMAC signature verification, checkout sessions, customer portal)
+- **AI & Vector Embeddings:** OpenAI (`text-embedding-3-small`) & xAI (Grok)
+- **Document Parsing:** `mammoth` (DOCX), `pdf2json` (PDF)
 
 ---
 
 ## 🔒 Security & Architecture
 
-Sociarig utilizes a production-grade architecture designed for robust SaaS operations:
-
-1. **The Double Lock System**: Premium features (like Newsletter generation) and tier limits (5, 150, or 500 generations) are validated in the UI and cryptographically enforced in the `/api/v1/generations` route before AI compute is triggered.
-2. **HMAC Webhook Verification**: The `/api/v1/webhooks/lemonsqueezy` route uses Node's native `crypto` library to verify Lemon Squeezy payload signatures, preventing spoofed billing updates.
-3. **Idempotent Background Jobs**: Inngest workers are triggered with unique `generationId` keys, ensuring that network retries never result in duplicate AI generations or double-charged credits.
-4. **Realtime Hydration**: Supabase channels watch for database changes (e.g., when a webhook resets monthly credits) and instantly invalidate TanStack Query caches to update the UI without a page reload.
+1. **PKCE Authentication Flow**: Email verification and password resets route through `/auth/callback` to exchange server tokens for authenticated session cookies before redirecting to onboarding or the workspace.
+2. **Disposable Domain Filtering**: New accounts are screened against active temporary email domains prior to hitting Supabase Auth or consuming Resend delivery quota.
+3. **Atomic Generation Lock & Refund Safety**: Content records are conditionally transitioned from `pending` to `processing`. Credit deductions are recorded with a pre-flight snapshot; any upstream worker failure triggers an immediate credit refund.
+4. **Middleware Auth Exemption**: Internal webhook endpoints (`/api/v1/inngest`, `/api/v1/webhooks`) and auth callbacks are explicitly exempt from session redirects in `middleware.ts`.
+5. **Webhook Deduplication**: Webhooks evaluate event IDs against a unique index on `webhook_events`, rejecting duplicate delivery attempts before modifying subscriber quotas.
 
 ---
 
@@ -53,20 +60,23 @@ Sociarig utilizes a production-grade architecture designed for robust SaaS opera
 
 ### Prerequisites
 
-- Node.js 18.x or higher
-- A Supabase account and project
-- A Lemon Squeezy account
-- An Inngest account (or local dev server)
+- Node.js 18.18+ or Node.js 20+
+- A Supabase project with PostgreSQL
+- A Resend account (with API key)
+- A Lemon Squeezy store and webhook signing secret
+- An Inngest Cloud account or local Inngest CLI
 
-### 1. Clone the repository
+---
+
+### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/sociarig.git
+git clone [https://github.com/yourusername/sociarig.git](https://github.com/yourusername/sociarig.git)
 cd sociarig
-
 ```
+````
 
-### 2. Install dependencies
+### 2. Install Dependencies
 
 ```bash
 npm install
@@ -75,47 +85,73 @@ npm install
 
 ### 3. Environment Variables
 
-Create a `.env.local` file in the root directory and populate it with the following keys:
+Create a `.env.local` file in the project root:
 
 ```env
-# Next.js App
+# App Configuration
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# Supabase (Auth & DB)
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+# Supabase (Auth, DB & Storage)
+NEXT_PUBLIC_SUPABASE_URL=[https://your-project.supabase.co](https://your-project.supabase.co)
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key # KEEP SECRET!
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-# Lemon Squeezy (Billing)
-LEMON_SQUEEZY_API_KEY=your_ls_api_key
-LEMON_SQUEEZY_STORE_ID=your_ls_store_id
-LEMON_SQUEEZY_WEBHOOK_SECRET=your_custom_webhook_secret
+# Inngest (Background Worker)
+INNGEST_EVENT_KEY=your_inngest_event_key
+INNGEST_SIGNING_KEY=your_inngest_signing_key
 
-# Inngest (Background Jobs)
-INNGEST_EVENT_KEY=local
-INNGEST_SIGNING_KEY=local
+# AI Providers
+OPENAI_API_KEY=your_openai_api_key
+XAI_API_KEY=your_xai_api_key
 
-# AI Provider
-AI_API_KEY=your_llm_api_key
+# Lemon Squeezy (Billing & Webhooks)
+LEMON_SQUEEZY_API_KEY=your_lemonsqueezy_api_key
+LEMON_SQUEEZY_STORE_ID=your_store_id
+LEMON_SQUEEZY_WEBHOOK_SECRET=your_webhook_signing_secret
+
+# Resend (Auth & Notifications)
+RESEND_API_KEY=re_your_api_key
 
 ```
 
-### 4. Database Setup
+---
 
-Run the included SQL schemas in your Supabase SQL Editor to set up the required tables:
+### 4. Supabase Configuration
 
-- `subscriptions`
-- `brand_voices`
-- `voice_documents`
-- `content_generations`
+#### A. Database Schema
 
-_Note: Ensure Row Level Security (RLS) is enabled on all tables so users can only access their own data via `user_id`._
+Execute the database migrations in your Supabase SQL Editor to establish:
 
-### 5. Running Local Development
+- `subscriptions` (User tier, credit usage counters, Lemon Squeezy references)
+- `brand_voices` (Voice profiles, system prompts, onboarding completion flag)
+- `voice_documents` (Uploaded training docs, chunk statuses, storage paths)
+- `content_generations` (Prompts, platform outputs, generation statuses)
+- `webhook_events` (Unique Lemon Squeezy event IDs for idempotency)
 
-To run the full stack locally, you need three terminal instances:
+Ensure Row Level Security (RLS) is enabled with policies constraining reads and writes to `auth.uid() = user_id`.
 
-**Terminal 1: Next.js Frontend/API**
+#### B. Auth & SMTP Setup
+
+1. **Authentication -> URL Configuration**:
+
+- Set **Site URL** to `http://localhost:3000` (or your production domain).
+- Add `http://localhost:3000/**` to **Redirect URLs**.
+
+2. **Authentication -> SMTP Settings**:
+
+- Host: `smtp.resend.com`
+- Port: `587`
+- Username: `resend`
+- Password: `your-resend-api-key`
+- Sender Email: `onboarding@resend.dev` (for local sandbox) or your verified domain.
+
+---
+
+### 5. Running the Application Locally
+
+You will need three terminal windows:
+
+**Terminal 1: Next.js Development Server**
 
 ```bash
 npm run dev
@@ -125,20 +161,21 @@ npm run dev
 **Terminal 2: Inngest Dev Server**
 
 ```bash
-npx inngest-cli@latest dev
+npx inngest-cli@latest dev -u http://localhost:3000/api/v1/inngest
 
 ```
 
-_(This starts the local worker environment at `http://localhost:8288`)_
+Access the local Inngest dashboard at `http://localhost:8288` to inspect event triggers and background runs.
 
-**Terminal 3: Ngrok (For Lemon Squeezy Webhooks)**
+**Terminal 3: Ngrok Webhook Tunnel (For Lemon Squeezy)**
 
 ```bash
 ngrok http 3000
 
 ```
 
-Copy the `https` URL from ngrok and paste it into your Lemon Squeezy Webhook settings (e.g., `[https://your-ngrok-url.app/api/v1/webhooks/lemonsqueezy](https://your-ngrok-url.app/api/v1/webhooks/lemonsqueezy)`). Ensure you select the events for `subscription_created`, `subscription_updated`, `subscription_payment_success`, and `order_refunded`.
+Update your Lemon Squeezy Webhook URL with your ngrok forwarding address:
+`https://your-tunnel.ngrok-free.app/api/v1/webhooks/lemonsqueezy`
 
 ---
 
@@ -147,23 +184,31 @@ Copy the `https` URL from ngrok and paste it into your Lemon Squeezy Webhook set
 ```text
 src/
 ├── app/
-│   ├── (auth)/             # Login & Signup flows
-│   ├── app/                # Protected SaaS Dashboard (Sidebar, Activity Hub)
+│   ├── (auth)/                  # Login, Signup, Reset Password routes
 │   ├── api/
-│   │   └── v1/             # API Routes (Generations, Billing, Webhooks, Voices)
-│   ├── privacy/            # Static Legal Pages
-│   ├── terms/              # Static Legal Pages
-│   └── layout.tsx          # Global HTML/SEO wrapper
+│   │   └── v1/
+│   │       ├── generations/     # Generation submission & credit rollback logic
+│   │       ├── inngest/         # Inngest edge route handler
+│   │       ├── voices/          # Document upload & training ingestion
+│   │       └── webhooks/        # Lemon Squeezy webhook listeners
+│   ├── app/                     # Protected application area
+│   │   ├── history/             # Generation history table & single view
+│   │   ├── onboarding/          # Mandatory brand voice calibration
+│   │   ├── settings/            # Profile & billing management
+│   │   └── page.tsx             # Generation workspace
+│   ├── auth/
+│   │   └── callback/            # PKCE code exchange handler
+│   ├── layout.tsx               # Root application layout
+│   └── middleware.ts            # Route protection, onboarding gates & API bypasses
 ├── components/
-│   ├── landing/            # Public marketing components (Nav, Footer, Pricing)
-│   └── dashboard/          # Internal UI components
-├── lib/
-│   ├── inngest/            # Background worker definitions and client
-│   └── util/
-│       ├── actions/        # Server actions
-│       ├── hooks/          # Custom React Query hooks (useBilling, useAppLayout)
-│       └── supabase/       # Supabase client configurations (browser/server)
-└── sanity/                 # Sanity CMS integration for the blog
+│   ├── dashboard/               # Generator form, history views, voice uploaders
+│   └── landing/                 # Public landing page sections & navigation
+└── lib/
+    ├── inngest/                 # Function definitions & Inngest client
+    └── util/
+        ├── actions/             # Server actions (auth, profile)
+        ├── hooks/               # Custom hooks (useGenerator, useHistory, useOnboarding)
+        └── supabase/            # Client, server, and middleware Supabase instances
 
 ```
 
@@ -172,3 +217,7 @@ src/
 ## 📄 License
 
 Copyright © 2026 Sociarig Inc. All rights reserved.
+
+```
+
+```
