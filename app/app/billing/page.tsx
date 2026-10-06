@@ -7,7 +7,7 @@ import { format } from "date-fns";
 
 // Ensure these match your exact Lemon Squeezy Variant IDs
 const STARTER_VARIANT_ID = 2189842;
-const PREMIUM_VARIANT_ID = 2189848; 
+const PREMIUM_VARIANT_ID = 2189848;
 
 export default function BillingPage() {
   const {
@@ -142,7 +142,7 @@ export default function BillingPage() {
             </div>
             <div className="w-full h-2.5 bg-paper rounded-full overflow-hidden shadow-inner">
               <div
-                className={`h-full rounded-full transition-all duration-1000 ${usagePercentage > 90 ? "bg-ember" : "bg-gradient-to-r from-signal to-[#FF5B39]"}`}
+                className={`h-full rounded-full transition-all duration-1000 ${usagePercentage > 90 ? "bg-red-700" : "bg-linear-to-r from-signal to-red-700"}`}
                 style={{ width: `${usagePercentage}%` }}
               />
             </div>

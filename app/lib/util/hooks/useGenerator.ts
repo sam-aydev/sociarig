@@ -45,7 +45,7 @@ export function useGenerator() {
 
   const selectedCount = Object.values(platforms).filter(Boolean).length;
 
-  const generateMutation = useMutation({
+  const { mutate: generateMutation, isPending } = useMutation({
     mutationFn: async () => {
       if (selectedCount === 0)
         throw new Error("Select at least one target platform.");
@@ -68,10 +68,10 @@ export function useGenerator() {
         requestedCount += count;
       });
 
-      // 2. STRICT PLAN VALIDATION
+      // 2. STRICT PLAN VALIDATION (Updated to include name and status)
       const { data: sub, error: subError } = await supabase
         .from("subscriptions")
-        .select("generations_used, max_generations")
+        .select("generations_used, max_generations, name, status")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -81,6 +81,20 @@ export function useGenerator() {
 
       const currentUsed = sub?.generations_used || 0;
       const currentMax = sub?.max_generations || 5;
+
+      // Determine if they are on the free plan
+      const planName =
+        sub?.status === "active" ? sub?.name?.toLowerCase() || "free" : "free";
+
+      // 🚀 NEW FIX: Block Newsletter on the frontend before hitting the API
+      if (
+        selectedPlatformsArray.includes("newsletter") &&
+        planName.includes("free")
+      ) {
+        throw new Error(
+          "Newsletter generation requires the Starter plan or higher.",
+        );
+      }
 
       // Check if they have enough credits for this specific request
       if (currentUsed + requestedCount > currentMax) {
@@ -239,7 +253,7 @@ export function useGenerator() {
       return;
     }
 
-    generateMutation.mutate();
+    generateMutation();
   };
 
   const handleReset = () => {
@@ -263,5 +277,6 @@ export function useGenerator() {
     handleReset,
     platformCounts,
     setPlatformCount,
+    isPending
   };
 }

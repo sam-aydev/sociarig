@@ -78,7 +78,7 @@ export default function OnboardingPage() {
           Train your digital twin.
         </h1>
         <p className="text-ink-soft text-base mb-8 leading-relaxed">
-          To generate content that actually sounds like you, Fractal needs
+          To generate content that actually sounds like you, Sociarig needs
           reference material. Upload strictly 3 of your best past newsletters,
           blog posts, or LinkedIn threads.
         </p>

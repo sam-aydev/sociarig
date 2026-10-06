@@ -17,7 +17,8 @@ const SPRING: object = {
 
 export default function GeneratorPage() {
   const generatorProps = useGenerator();
-  const { engineState, inputMode, generatedData, handleReset } = generatorProps;
+  const { engineState, inputMode, generatedData, handleReset, isPending } =
+    generatorProps;
   const reduceMotion = useReducedMotion();
   const outputRef = useRef<HTMLDivElement>(null);
 

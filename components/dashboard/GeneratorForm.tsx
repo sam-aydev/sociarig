@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Link2,
@@ -38,7 +38,8 @@ interface GeneratorFormProps {
 
   selectedCount: number;
   handleGenerate: (e: React.FormEvent) => void;
-  handleReset: () => void; // Added for the reset overlay
+  handleReset: () => void;
+  isPending: boolean;
 }
 
 const PLATFORM_CONFIG = [
@@ -68,22 +69,11 @@ export default function GeneratorForm(props: GeneratorFormProps) {
     selectedCount,
     handleGenerate,
     handleReset,
+    isPending,
   } = props;
 
   // Local lock to cover the microsecond gap before React Query switches engineState to 'processing'
   const [isSubmittingLocal, setIsSubmittingLocal] = useState(false);
-
-  // Auto-unlock if the engine resets or errors out
-  useEffect(() => {
-    if (engineState === "idle" || engineState === "error") {
-      setIsSubmittingLocal(false);
-    }
-  }, [engineState]);
-
-  const isBusy =
-    engineState === "processing" ||
-    engineState === "completed" ||
-    isSubmittingLocal;
 
   const handleModeSwitch = (mode: InputMode) => {
     if (mode !== inputMode) {
@@ -104,11 +94,22 @@ export default function GeneratorForm(props: GeneratorFormProps) {
       });
       return;
     }
-
-    // Immediately lock the UI
-    setIsSubmittingLocal(true);
-    handleGenerate(e);
+    try {
+      // Immediately lock the UI
+      setIsSubmittingLocal(true);
+      handleGenerate(e);
+    } catch (error) {
+      console.log(error);
+      setIsSubmittingLocal(false);
+    } finally {
+      setIsSubmittingLocal(false);
+    }
   };
+
+  const isBusy =
+    engineState === "processing" ||
+    engineState === "completed" ||
+    isSubmittingLocal;
 
   return (
     <motion.div
@@ -336,7 +337,7 @@ export default function GeneratorForm(props: GeneratorFormProps) {
             whileHover={{ scale: selectedCount > 0 && !isBusy ? 1.01 : 1 }}
             whileTap={{ scale: selectedCount > 0 && !isBusy ? 0.98 : 1 }}
             type="submit"
-            disabled={isBusy || selectedCount === 0}
+            disabled={isBusy || selectedCount === 0 || isPending}
             className="w-full py-3 sm:py-4 bg-ink text-paper rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all shadow-xl shadow-ink/20 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 sm:gap-3 cursor-pointer group"
           >
             <Sparkles

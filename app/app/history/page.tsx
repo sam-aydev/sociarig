@@ -13,7 +13,7 @@ import {
   Link2,
   Lightbulb,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -227,7 +227,8 @@ function HistoryContent() {
                           </td>
 
                           <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center justify-end gap-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                              {" "}
                               {item.status === "completed" && (
                                 <Link
                                   href={`/app/history/${item.id}`}
@@ -245,9 +246,9 @@ function HistoryContent() {
                                 title="Delete record"
                               >
                                 {isDeleting ? (
-                                   <Loader2 size={16} className="animate-spin" />
+                                  <Loader2 size={16} className="animate-spin" />
                                 ) : (
-                                   <Trash2 size={16} />
+                                  <Trash2 size={16} />
                                 )}
                               </button>
                             </div>
@@ -327,9 +328,13 @@ function HistoryContent() {
                 <div className="w-12 h-12 rounded-full bg-ember/10 flex items-center justify-center mb-4">
                   <AlertTriangle size={24} className="text-red-700" />
                 </div>
-                <h3 className="text-xl font-bold text-ink mb-2">Delete Generation?</h3>
+                <h3 className="text-xl font-bold text-ink mb-2">
+                  Delete Generation?
+                </h3>
                 <p className="text-sm text-ink-soft leading-relaxed">
-                  This action cannot be undone. All exported assets associated with this generation will be permanently removed from your workspace.
+                  This action cannot be undone. All exported assets associated
+                  with this generation will be permanently removed from your
+                  workspace.
                 </p>
               </div>
 

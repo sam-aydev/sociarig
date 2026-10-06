@@ -49,7 +49,7 @@ export default function Hero() {
   }, [activeStep]);
 
   return (
-    <section className="relative pt-32 pb-8 md:pt-40 md:pb-32 px-2 md:px-10 overflow-hidden">
+    <section className="relative pt-30 pb-8 md:pt-32 md:pb-32 px-2 md:px-10 overflow-hidden">
       {/* Ambient background glow */}
       <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[150%] md:w-[100%] h-[800px] bg-[radial-gradient(ellipse_at_top,_var(--color-signal)_0%,_transparent_50%)] opacity-[0.06] pointer-events-none" />
 
@@ -61,7 +61,7 @@ export default function Hero() {
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="max-w-4xl flex flex-col items-center"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-8 rounded-full border border-ink/10 bg-white shadow-sm text-xs font-semibold tracking-wide uppercase text-ink-soft">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-4 md:mb-8 rounded-full border border-ink/10 bg-white shadow-sm text-xs font-semibold tracking-wide uppercase text-ink-soft">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-900 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-700"></span>
@@ -69,16 +69,14 @@ export default function Hero() {
             The Sociarig Engine
           </div>
 
-          <h1 className="font- font-sans text-5xl md:text-7xl lg:text-8xl tracking-tight leading-[1.05] text-balance mb-8">
-            Turn one link or idea into a month of content.{" "}
-            <br className="hidden md:block" />
-            <span className="text-ink-faint">In your exact voice.</span>
+          <h1 className="font-sans text-5xl md:text-7xl lg:text-8xl tracking-tight leading-[1.05] text-balance mb-6 md:mb-8">
+            One Link. Endless Content. <br className="hidden md:block" />
+            <span className="text-ink-faint">Your Exact Voice.</span>
           </h1>
 
-          <p className="text-lg md:text-xl text-ink-soft max-w-2xl text-balance mb-10">
-            Stop sounding like a robot. Paste a YouTube URL or Idea, and
-            instantly generate Twitter threads, LinkedIn carousels, and
-            newsletters tuned perfectly to your tone.
+          <p className="text-sm md:text-xl text-ink-soft max-w-2xl text-balance mb-7 md:mb-10">
+            Drop a URL or idea. Sociarig instantly writes Twitter threads,
+            LinkedIn posts, and newsletters that actually sound like you.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">

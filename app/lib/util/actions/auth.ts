@@ -2,6 +2,7 @@
 
 import { createClient } from "../supabase/server";
 import { redirect } from "next/navigation";
+import disposableDomains from "disposable-email-domains";
 // Import the base client to create an Admin instance that bypasses RLS
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -25,15 +26,28 @@ export async function loginUser(formData: FormData) {
 }
 
 export async function signUpUser(formData: FormData) {
+  const supabase = await createClient();
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
-  // Use the standard client to create the user account
-  const supabase = await createClient();
+  if (!email || !password) return { error: "Email and password are required" };
+
+  const domain = email.split("@")[1]?.toLowerCase();
+
+  if (disposableDomains.includes(domain)) {
+    return {
+      error:
+        "Temporary or disposable email addresses are not allowed. Please use a valid work or personal email.",
+    };
+  }
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      // Points to the callback route, which will verify the email and redirect to onboarding
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/app/onboarding`,
+    },
   });
 
   if (error) {
@@ -74,8 +88,11 @@ export async function signUpUser(formData: FormData) {
       return { error: "Account created, but failed to setup workspace." };
     }
 
-    // Direct new users to the mandatory vector training gate
-    return { success: true, route: "/app/onboarding" };
+    return {
+      success: true,
+      message:
+        "Account created successfully! Please check your email for the confirmation link.",
+    };
   }
 }
 
@@ -84,7 +101,6 @@ export async function signOutUser() {
   await supabase.auth.signOut();
   redirect("/auth/login");
 }
-
 
 export async function resetPassword(formData: FormData) {
   const supabase = await createClient();
@@ -95,8 +111,8 @@ export async function resetPassword(formData: FormData) {
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    // Redirects the user to this page after they click the email link
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/update-password`,
+    // Points to the callback route, which sets the session cookie, THEN redirects to /update-password
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/update-password`,
   });
 
   if (error) {
