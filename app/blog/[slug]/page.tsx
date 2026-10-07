@@ -3,9 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PortableText } from "@portabletext/react";
-import { client } from "@/sanity/lib/client"; // Adjust path
-import Nav from "@/components/landing/Nav"; // Adjust path
-import Footer from "@/components/landing/Footer"; // Adjust path
+import { client } from "@/sanity/lib/client";
+import Nav from "@/components/landing/Nav";
+import Footer from "@/components/landing/Footer";
 
 // Define types
 type PostData = {
@@ -13,22 +13,24 @@ type PostData = {
   description: string | null;
   imageUrl: string | null;
   publishedAt: string;
-  body: any; // Sanity Portable Text block array
+  body: any;
 };
 
-// 1. Dynamic SEO Metadata Generation
-export async function generateMetadata({
-  params,
-}: {
-  params: { slug: string };
-}): Promise<Metadata> {
+type Props = {
+  params: Promise<{ slug: string }>;
+};
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  // AWAIT the params before destructuring the slug
+  const { slug } = await params;
+
   const query = `*[_type == "post" && slug.current == $slug][0]{
     title,
     "description": seo.metaDescription,
     "imageUrl": mainImage.asset->url
   }`;
 
-  const post = await client.fetch(query, { slug: params.slug });
+  const post = await client.fetch(query, { slug });
 
   if (!post) return { title: "Post Not Found" };
 
@@ -47,12 +49,9 @@ export async function generateMetadata({
   };
 }
 
-// 2. Page Component
-export default async function BlogPostPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
+export default async function BlogPostPage({ params }: Props) {
+  const { slug } = await params;
+
   const query = `*[_type == "post" && slug.current == $slug][0]{
     title,
     "description": seo.metaDescription,
@@ -61,7 +60,7 @@ export default async function BlogPostPage({
     body
   }`;
 
-  const post = await client.fetch<PostData>(query, { slug: params.slug });
+  const post = await client.fetch<PostData>(query, { slug });
 
   if (!post) {
     notFound();
@@ -73,7 +72,6 @@ export default async function BlogPostPage({
 
       <main className="flex-1 w-full pt-32 md:pt-40 pb-24">
         <article className="max-w-3xl mx-auto px-6 md:px-10">
-          {/* Back Button */}
           <Link
             href="/blog"
             className="inline-flex items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink mb-10 transition-colors"
@@ -107,7 +105,7 @@ export default async function BlogPostPage({
               {post.title}
             </h1>
             {post.description && (
-              <p className="text-lg md:text-xl text-ink-soft leading-relaxed">
+              <p className="text-sm md:text-lg text-ink-soft leading-relaxed">
                 {post.description}
               </p>
             )}
@@ -127,7 +125,7 @@ export default async function BlogPostPage({
           )}
 
           {/* Portable Text Body rendered with Tailwind Typography */}
-          <div className="prose prose-lg md:prose-xl max-w-none prose-headings:font-display prose-headings:font-bold prose-a:text-signal hover:prose-a:text-green-700 prose-img:rounded-xl">
+          <div className="prose prose-sm md:prose-lg max-w-none prose-headings:font-display prose-headings:font-bold prose-a:text-signal hover:prose-a:text-green-700 prose-img:rounded-xl">
             {post.body ? (
               <PortableText value={post.body} />
             ) : (
