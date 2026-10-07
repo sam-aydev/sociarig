@@ -48,7 +48,7 @@ export default function GeneratorPage() {
                 }
           }
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full blur-[100px]"
+          className="absolute -top-32 left-1/2 h-125 w-200 -translate-x-1/2 rounded-full blur-[100px] will-change-transform transform-gpu"
           style={{
             background:
               "radial-gradient(closest-side, color-mix(in srgb, var(--color-signal) 20%, transparent), transparent)",
@@ -165,13 +165,13 @@ export default function GeneratorPage() {
                 className="relative w-[min(90%,24rem)] overflow-hidden rounded-2xl border border-ink/10 bg-white/90 backdrop-blur-xl shadow-2xl shadow-ink/10"
               >
                 <motion.div
-                  className="absolute inset-0 z-0 bg-gradient-to-r from-transparent via-white/60 to-transparent -skew-x-12"
+                  className="absolute inset-0 z-0 bg-linear-to-r from-transparent via-white/60 to-transparent -skew-x-12 will-change-transform"
                   animate={{ x: ["-200%", "200%"] }}
                   transition={{
                     duration: 2,
                     ease: "easeInOut",
                     repeat: Infinity,
-                    repeatDelay: 1,
+                    repeatDelay: 0.3,
                   }}
                 />
                 <div className="relative z-10 flex items-center gap-5 px-6 py-5">

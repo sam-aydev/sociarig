@@ -113,7 +113,6 @@ export default function GeneratorForm(props: GeneratorFormProps) {
 
   return (
     <motion.div
-      layout
       className="bg-white/80 backdrop-blur-xl border border-white/40 rounded-3xl sm:rounded-[2rem] p-2 sm:p-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-8 sm:mb-10 relative overflow-hidden ring-1 ring-ink/5"
     >
       {/* SUCCESS OVERLAY: Covers the form beautifully when completed */}
@@ -237,7 +236,6 @@ export default function GeneratorForm(props: GeneratorFormProps) {
 
               return (
                 <motion.div
-                  layout
                   key={platform.id}
                   className={`relative overflow-hidden rounded-xl sm:rounded-2xl border transition-all ${
                     isSelected

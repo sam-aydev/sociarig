@@ -35,14 +35,14 @@ const POSTS_QUERY = `*[_type == "post"] | order(_createdAt desc) {
 }`;
 
 export default async function BlogIndex() {
-  const posts = await client.fetch<Post[]>(POSTS_QUERY);
+  const posts = await client?.fetch<Post[]>(POSTS_QUERY);
 
   return (
     <div className="min-h-screen bg-paper text-ink flex flex-col relative overflow-hidden">
       <Nav />
 
       {/* Ambient background glow matching your footer */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-[radial-gradient(ellipse_at_top,_var(--color-signal)_0%,_transparent_50%)] opacity-[0.08] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-125 bg-[radial-gradient(ellipse_at_top,_var(--color-signal)_0%,_transparent_50%)] opacity-[0.08] pointer-events-none" />
 
       <main className="flex-1 max-w-[var(--container-content,1200px)] mx-auto px-6 md:px-10 pt-32 md:pt-40 pb-24 relative z-10 w-full">
         {/* Page Header */}
