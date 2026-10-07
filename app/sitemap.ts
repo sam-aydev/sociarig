@@ -2,7 +2,7 @@ import { MetadataRoute } from "next";
 import { client } from "@/sanity/lib/client";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "www.sociarig.com";
 
   // Fetch all post slugs and their last modified dates
   const POSTS_QUERY = `*[_type == "post" && defined(slug.current)] {
