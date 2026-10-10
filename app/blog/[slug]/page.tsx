@@ -2,12 +2,12 @@ import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PortableText } from "@portabletext/react";
+import { PortableText, PortableTextComponents } from "@portabletext/react";
 import { client } from "@/sanity/lib/client";
+import { urlFor } from "@/sanity/lib/image";
 import Nav from "@/components/landing/Nav";
 import Footer from "@/components/landing/Footer";
 
-// Define types
 type PostData = {
   title: string;
   description: string | null;
@@ -20,10 +20,37 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  // AWAIT the params before destructuring the slug
-  const { slug } = await params;
+// Custom serializer for PortableText custom block types
+const portableTextComponents: PortableTextComponents = {
+  types: {
+    image: ({ value }) => {
+      if (!value?.asset) return null;
+      const imageUrl = urlFor(value).url();
 
+      return (
+        <figure className="my-8 overflow-hidden rounded-2xl border border-ink/10">
+          <div className="relative w-full h-[260px] sm:h-[380px] md:h-[480px]">
+            <Image
+              src={imageUrl}
+              alt={value.alt || "Blog post image"}
+              fill
+              sizes="(max-width: 768px) 100vw, 768px"
+              className="object-cover"
+            />
+          </div>
+          {value.caption && (
+            <figcaption className="text-center text-xs text-ink-soft py-2 italic">
+              {value.caption}
+            </figcaption>
+          )}
+        </figure>
+      );
+    },
+  },
+};
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
   const query = `*[_type == "post" && slug.current == $slug][0]{
     title,
     "description": seo.metaDescription,
@@ -31,7 +58,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }`;
 
   const post = await client.fetch(query, { slug });
-
   if (!post) return { title: "Post Not Found" };
 
   return {
@@ -92,7 +118,6 @@ export default async function BlogPostPage({ params }: Props) {
             Back to blog
           </Link>
 
-          {/* Post Header */}
           <header className="mb-12">
             <div className="text-signal font-medium mb-4">
               {new Date(post.publishedAt).toLocaleDateString("en-US", {
@@ -105,29 +130,31 @@ export default async function BlogPostPage({ params }: Props) {
               {post.title}
             </h1>
             {post.description && (
-              <p className="text-sm md:text-lg text-ink-soft leading-relaxed">
+              <p className="text-lg md:text-xl text-ink-soft leading-relaxed">
                 {post.description}
               </p>
             )}
           </header>
 
-          {/* Featured Image */}
           {post.imageUrl && (
             <div className="relative w-full h-[300px] md:h-[450px] rounded-2xl overflow-hidden mb-16 shadow-lg border border-ink/10">
               <Image
                 src={post.imageUrl}
                 alt={post.title}
                 fill
+                sizes="(max-width: 768px) 100vw, 768px"
                 className="object-cover"
                 priority
               />
             </div>
           )}
 
-          {/* Portable Text Body rendered with Tailwind Typography */}
-          <div className="prose prose-sm md:prose-lg max-w-none prose-headings:font-display prose-headings:font-bold prose-a:text-signal hover:prose-a:text-green-700 prose-img:rounded-xl">
+          <div className="prose prose-lg md:prose-xl max-w-none prose-headings:font-display prose-headings:font-bold prose-a:text-signal hover:prose-a:text-green-700 prose-img:rounded-xl">
             {post.body ? (
-              <PortableText value={post.body} />
+              <PortableText
+                value={post.body}
+                components={portableTextComponents}
+              />
             ) : (
               <p>No content available.</p>
             )}
